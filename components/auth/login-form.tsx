@@ -15,19 +15,24 @@ import { authClient } from "@/lib/auth";
 
 const RESEND_DELAY = 60;
 
+type AuthError = { code?: unknown; message?: string };
+
 function getErrorMessage(error: unknown): string {
-  const code = typeof error === "string" ? error : null;
-  switch (code) {
+  const authError =
+    typeof error === "string" ? { code: error } : (error as AuthError | null);
+  switch (authError?.code) {
     case "INVALID_OTP":
       return "That code isn't correct. Check it and try again.";
     case "OTP_EXPIRED":
       return "That code has expired. Request a new one.";
     case "TOO_MANY_ATTEMPTS":
       return "Too many attempts. Please wait a moment and try again.";
+    case "TOO_MANY_REQUESTS":
+      return "Too many requests. Please wait a minute and try again.";
     case "USER_NOT_FOUND":
       return "No account found for that email. Ask an admin to add you.";
     default:
-      return "Something went wrong. Please try again.";
+      return authError?.message || "Something went wrong. Please try again.";
   }
 }
 
