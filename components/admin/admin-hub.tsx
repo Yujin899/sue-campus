@@ -3,6 +3,7 @@ import {
   ArrowRightIcon,
   BookOpenIcon,
   FileQuestionIcon,
+  UsersIcon,
   type LucideIcon,
 } from "lucide-react";
 
@@ -26,6 +27,12 @@ const adminSections: AdminSection[] = [
     description: "Build quizzes and manage questions for each subject.",
     href: "/admin/quizzes",
     icon: FileQuestionIcon,
+  },
+  {
+    title: "Users",
+    description: "Change roles, block accounts, and remove people.",
+    href: "/admin/users",
+    icon: UsersIcon,
   },
 ];
 

@@ -167,3 +167,32 @@ export interface QuizStatusStats {
   total: number;
   byStatus: Record<QuizStatus, number>;
 }
+
+export type UserRole = "USER" | "ADMIN";
+
+export interface ManagedUser {
+  id: string;
+  name: string;
+  email: string;
+  emailVerified: boolean;
+  image: string | null;
+  role: UserRole;
+  banned: boolean;
+  banReason: string | null;
+  bannedUntil: string | null;
+  createdAt: string;
+  updatedAt: string;
+  _count: {
+    sessions: number;
+    quizAttempts: number;
+    authoredQuizzes: number;
+  };
+}
+
+export interface ManagedUserPage {
+  items: ManagedUser[];
+  total: number;
+  page: number;
+  limit: number;
+  pageCount: number;
+}

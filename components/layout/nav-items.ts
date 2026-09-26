@@ -4,6 +4,7 @@ import {
   LayoutDashboardIcon,
   ShieldIcon,
   UserRoundIcon,
+  UsersIcon,
   type LucideIcon,
 } from "lucide-react";
 
@@ -25,6 +26,7 @@ export const adminNavItems: NavItem[] = [
   { title: "Admin", href: "/admin", icon: ShieldIcon, exact: true },
   { title: "Subjects", href: "/admin/subjects", icon: BookOpenIcon },
   { title: "Quizzes", href: "/admin/quizzes", icon: FileQuestionIcon },
+  { title: "Users", href: "/admin/users", icon: UsersIcon },
 ];
 
 export const adminTabItem: NavItem = {
