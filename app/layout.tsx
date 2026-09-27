@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
@@ -18,9 +18,24 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Sue Campus",
   description: "Student resources for Al Salam University (SUE)",
-  icons: {
-    icon: "/logo.png",
+  applicationName: "Sue Campus",
+  appleWebApp: {
+    capable: true,
+    title: "Sue Campus",
+    statusBarStyle: "default",
   },
+  icons: {
+    icon: "/icons/icon-192.png",
+  },
+};
+
+export const viewport: Viewport = {
+  // Two tags so the browser UI follows the active theme. Without this the
+  // address bar stays light over the dark UI.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F8FAFC" },
+    { media: "(prefers-color-scheme: dark)", color: "#0B1424" },
+  ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
