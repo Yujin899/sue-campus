@@ -12,6 +12,9 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Student resources for Al Salam University (SUE)",
     // "/" redirects to /dashboard, so start there directly.
     start_url: "/dashboard",
+    // Stable identity so the browser keeps recognising the installed app
+    // across manifest changes.
+    id: "/dashboard",
     scope: "/",
     display: "standalone",
     orientation: "portrait",

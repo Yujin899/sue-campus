@@ -15,7 +15,9 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/toast";
-import { clientFetch } from "@/lib/client-api";
+import { FieldError, fieldAria, useFieldErrors } from "@/components/form/field";
+import { ApiRequestError, clientFetch } from "@/lib/client-api";
+import { hasErrors, validateQuiz } from "@/lib/validation";
 import type { Quiz, Subject } from "@/lib/types";
 
 export function QuizForm({
@@ -35,6 +37,7 @@ export function QuizForm({
     String(quiz?.durationMinutes ?? 10),
   );
   const [isSaving, setIsSaving] = React.useState(false);
+  const { errors, show, clear } = useFieldErrors();
 
   React.useEffect(() => {
     let active = true;
@@ -51,16 +54,17 @@ export function QuizForm({
   }, []);
 
   const durationMinutes = Number(duration);
-  const canSubmit =
-    subjectId.length > 0 &&
-    title.trim().length > 0 &&
-    Number.isInteger(durationMinutes) &&
-    durationMinutes > 0 &&
-    !isSaving;
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!canSubmit) return;
+    if (isSaving) return;
+
+    const found = validateQuiz({ subjectId, title, duration });
+    if (hasErrors(found)) {
+      show(found);
+      return;
+    }
+
     setIsSaving(true);
     try {
       const body = JSON.stringify({
@@ -81,27 +85,42 @@ export function QuizForm({
       });
       onSuccess(saved);
     } catch (error) {
-      toast.add({
-        type: "error",
-        title: "Couldn't save quiz",
-        description:
-          error instanceof Error ? error.message : "Please try again.",
-      });
+      if (error instanceof ApiRequestError && hasErrors(error.fieldErrors)) {
+        show(error.fieldErrors);
+        toast.add({
+          type: "error",
+          title: "Couldn't save quiz",
+          description: "Check the highlighted fields.",
+        });
+      } else {
+        toast.add({
+          type: "error",
+          title: "Couldn't save quiz",
+          description:
+            error instanceof Error ? error.message : "Please try again.",
+        });
+      }
     } finally {
       setIsSaving(false);
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-4">
+    <form onSubmit={handleSubmit} className="grid gap-4" noValidate>
       <div className="grid gap-2">
         <Label htmlFor="quiz-subject">Subject</Label>
         <Select
           value={subjectId || null}
           disabled={isSaving || subjects === null}
-          onValueChange={(value) => setSubjectId(value == null ? "" : String(value))}
+          onValueChange={(value) => {
+            setSubjectId(value == null ? "" : String(value));
+            clear("subjectId");
+          }}
         >
-          <SelectTrigger id="quiz-subject">
+          <SelectTrigger
+            id="quiz-subject"
+            {...fieldAria("subjectId", errors.subjectId)}
+          >
             <SelectValue
               placeholder={
                 subjects === null ? "Loading subjects…" : "Select a subject"
@@ -124,6 +143,7 @@ export function QuizForm({
             ))}
           </SelectContent>
         </Select>
+        <FieldError field="subjectId">{errors.subjectId}</FieldError>
       </div>
 
       <div className="grid gap-2">
@@ -134,8 +154,13 @@ export function QuizForm({
           autoComplete="off"
           placeholder="e.g. Algebra basics"
           disabled={isSaving}
-          onChange={(event) => setTitle(event.target.value)}
+          onChange={(event) => {
+            setTitle(event.target.value);
+            clear("title");
+          }}
+          {...fieldAria("title", errors.title)}
         />
+        <FieldError field="title">{errors.title}</FieldError>
       </div>
 
       <div className="grid gap-2">
@@ -157,8 +182,13 @@ export function QuizForm({
           min={1}
           value={duration}
           disabled={isSaving}
-          onChange={(event) => setDuration(event.target.value)}
+          onChange={(event) => {
+            setDuration(event.target.value);
+            clear("duration");
+          }}
+          {...fieldAria("duration", errors.duration)}
         />
+        <FieldError field="duration">{errors.duration}</FieldError>
       </div>
 
       <DialogFooter>
@@ -172,7 +202,7 @@ export function QuizForm({
             Cancel
           </Button>
         ) : null}
-        <Button type="submit" disabled={!canSubmit}>
+        <Button type="submit" disabled={isSaving}>
           {isSaving ? (
             <Loader2Icon className="animate-spin" aria-hidden="true" />
           ) : null}

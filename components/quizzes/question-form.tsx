@@ -16,7 +16,9 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/toast";
-import { clientFetch } from "@/lib/client-api";
+import { FieldError, fieldAria, useFieldErrors } from "@/components/form/field";
+import { ApiRequestError, clientFetch } from "@/lib/client-api";
+import { hasErrors, validateQuestion } from "@/lib/validation";
 import type { Question, QuestionType } from "@/lib/types";
 
 const TYPE_LABELS: Record<QuestionType, string> = {
@@ -49,9 +51,11 @@ export function QuestionForm({
     question?.correctAnswerIndices ?? [],
   );
   const [isSaving, setIsSaving] = React.useState(false);
+  const { errors, show, clear } = useFieldErrors();
 
   const isTrueFalse = type === "TRUE_FALSE";
   const effectiveOptions = isTrueFalse ? TRUE_FALSE_OPTIONS : options;
+  const trimmedOptions = effectiveOptions.map((option) => option.trim());
 
   function changeType(next: QuestionType) {
     setType(next);
@@ -63,6 +67,8 @@ export function QuestionForm({
           : ["", ""],
       );
     }
+    clear("options");
+    clear("correct");
   }
 
   function toggleCorrect(index: number) {
@@ -74,16 +80,20 @@ export function QuestionForm({
       }
       return current.includes(index) ? [] : [index];
     });
+    clear("correct");
   }
 
   function updateOption(index: number, value: string) {
     setOptions((current) =>
       current.map((option, position) => (position === index ? value : option)),
     );
+    clear("options");
+    clear("correct");
   }
 
   function addOption() {
     setOptions((current) => [...current, ""]);
+    clear("options");
   }
 
   function removeOption(index: number) {
@@ -95,22 +105,26 @@ export function QuestionForm({
         .filter((item) => item !== index)
         .map((item) => (item > index ? item - 1 : item)),
     );
+    clear("options");
+    clear("correct");
   }
-
-  const trimmedOptions = effectiveOptions.map((option) => option.trim());
-  const isValid =
-    prompt.trim().length > 0 &&
-    trimmedOptions.length >= 2 &&
-    trimmedOptions.every(Boolean) &&
-    new Set(trimmedOptions).size === trimmedOptions.length &&
-    correct.length >= 1 &&
-    (type === "MULTI_SELECT" || correct.length === 1) &&
-    correct.every((index) => index >= 0 && index < effectiveOptions.length);
-  const canSubmit = isValid && !isSaving;
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!canSubmit) return;
+    if (isSaving) return;
+
+    const found = validateQuestion({
+      type,
+      prompt,
+      options: effectiveOptions,
+      correct,
+    });
+
+    if (hasErrors(found)) {
+      show(found);
+      return;
+    }
+
     setIsSaving(true);
     try {
       const body = JSON.stringify({
@@ -136,19 +150,28 @@ export function QuestionForm({
       });
       onSuccess();
     } catch (error) {
-      toast.add({
-        type: "error",
-        title: "Couldn't save question",
-        description:
-          error instanceof Error ? error.message : "Please try again.",
-      });
+      if (error instanceof ApiRequestError && hasErrors(error.fieldErrors)) {
+        show(error.fieldErrors);
+        toast.add({
+          type: "error",
+          title: "Couldn't save question",
+          description: "Check the highlighted fields.",
+        });
+      } else {
+        toast.add({
+          type: "error",
+          title: "Couldn't save question",
+          description:
+            error instanceof Error ? error.message : "Please try again.",
+        });
+      }
     } finally {
       setIsSaving(false);
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-4">
+    <form onSubmit={handleSubmit} className="grid gap-4" noValidate>
       <div className="grid gap-2">
         <Label htmlFor="question-type">Type</Label>
         <Select
@@ -178,8 +201,13 @@ export function QuestionForm({
           value={prompt}
           placeholder="What do you want to ask?"
           disabled={isSaving}
-          onChange={(event) => setPrompt(event.target.value)}
+          onChange={(event) => {
+            setPrompt(event.target.value);
+            clear("prompt");
+          }}
+          {...fieldAria("prompt", errors.prompt)}
         />
+        <FieldError field="prompt">{errors.prompt}</FieldError>
       </div>
 
       <div className="grid gap-2">
@@ -207,6 +235,7 @@ export function QuestionForm({
                 disabled={isSaving}
                 placeholder={`Option ${index + 1}`}
                 aria-label={`Option ${index + 1}`}
+                {...fieldAria("options", errors.options)}
                 onChange={(event) => updateOption(index, event.target.value)}
               />
               {!isTrueFalse ? (
@@ -224,6 +253,9 @@ export function QuestionForm({
             </div>
           ))}
         </div>
+
+        <FieldError field="options">{errors.options}</FieldError>
+        <FieldError field="correct">{errors.correct}</FieldError>
 
         {!isTrueFalse ? (
           <Button
@@ -251,7 +283,7 @@ export function QuestionForm({
             Cancel
           </Button>
         ) : null}
-        <Button type="submit" disabled={!canSubmit}>
+        <Button type="submit" disabled={isSaving}>
           {isSaving ? (
             <Loader2Icon className="animate-spin" aria-hidden="true" />
           ) : null}

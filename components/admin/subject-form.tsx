@@ -9,7 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/toast";
 import { ImageUpload } from "@/components/admin/image-upload";
-import { clientFetch } from "@/lib/client-api";
+import { FieldError, fieldAria, useFieldErrors } from "@/components/form/field";
+import { ApiRequestError, clientFetch } from "@/lib/client-api";
+import { hasErrors, validateSubject } from "@/lib/validation";
 import type { Subject } from "@/lib/types";
 
 interface SubjectFormValues {
@@ -45,21 +47,26 @@ export function SubjectForm({
       : EMPTY_VALUES,
   );
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const { errors, show, clear } = useFieldErrors();
 
-  const canSubmit =
-    values.code.trim().length > 0 &&
-    values.name.trim().length > 0 &&
-    !isSubmitting;
-
-  function update(field: keyof SubjectFormValues) {
+  function update(field: "code" | "name") {
     return (
       event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-    ) => setValues((prev) => ({ ...prev, [field]: event.target.value }));
+    ) => {
+      setValues((prev) => ({ ...prev, [field]: event.target.value }));
+      clear(field);
+    };
   }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!canSubmit) return;
+    if (isSubmitting) return;
+
+    const found = validateSubject(values);
+    if (hasErrors(found)) {
+      show(found);
+      return;
+    }
 
     setIsSubmitting(true);
     const body = JSON.stringify({
@@ -87,19 +94,28 @@ export function SubjectForm({
       });
       onSuccess();
     } catch (error) {
-      toast.add({
-        type: "error",
-        title: isEditing ? "Update failed" : "Creation failed",
-        description:
-          error instanceof Error ? error.message : "Please try again.",
-      });
+      if (error instanceof ApiRequestError && hasErrors(error.fieldErrors)) {
+        show(error.fieldErrors);
+        toast.add({
+          type: "error",
+          title: isEditing ? "Update failed" : "Creation failed",
+          description: "Check the highlighted fields.",
+        });
+      } else {
+        toast.add({
+          type: "error",
+          title: isEditing ? "Update failed" : "Creation failed",
+          description:
+            error instanceof Error ? error.message : "Please try again.",
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-4">
+    <form onSubmit={handleSubmit} className="grid gap-4" noValidate>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="grid gap-2">
           <Label htmlFor="subject-code">Code</Label>
@@ -108,9 +124,11 @@ export function SubjectForm({
             placeholder="e.g. CS101"
             autoComplete="off"
             value={values.code}
-            onChange={update("code")}
             disabled={isSubmitting}
+            onChange={update("code")}
+            {...fieldAria("code", errors.code)}
           />
+          <FieldError field="code">{errors.code}</FieldError>
         </div>
         <div className="grid gap-2">
           <Label htmlFor="subject-name">Name</Label>
@@ -119,9 +137,11 @@ export function SubjectForm({
             placeholder="e.g. Introduction to Programming"
             autoComplete="off"
             value={values.name}
-            onChange={update("name")}
             disabled={isSubmitting}
+            onChange={update("name")}
+            {...fieldAria("name", errors.name)}
           />
+          <FieldError field="name">{errors.name}</FieldError>
         </div>
       </div>
 
@@ -132,8 +152,13 @@ export function SubjectForm({
           placeholder="Optional short description shown on the subject card."
           rows={3}
           value={values.description}
-          onChange={update("description")}
           disabled={isSubmitting}
+          onChange={(event) =>
+            setValues((prev) => ({
+              ...prev,
+              description: event.target.value,
+            }))
+          }
         />
       </div>
 
@@ -152,7 +177,7 @@ export function SubjectForm({
         <DialogClose render={<Button variant="outline" />} disabled={isSubmitting}>
           Cancel
         </DialogClose>
-        <Button type="submit" disabled={!canSubmit}>
+        <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? (
             <Loader2Icon className="animate-spin" aria-hidden="true" />
           ) : null}

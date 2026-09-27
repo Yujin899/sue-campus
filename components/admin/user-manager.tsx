@@ -299,8 +299,8 @@ export function UserManager() {
       </div>
 
       {loadError ? (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/50 p-12 text-center">
-          <p className="font-medium">Couldn&apos;t load users</p>
+        <div role="alert" className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/50 p-12 text-center">
+          <p className="font-medium text-destructive">Couldn&apos;t load users</p>
           <p className="text-sm text-muted-foreground">{loadError}</p>
           <Button variant="outline" onClick={() => void load()}>
             Try again

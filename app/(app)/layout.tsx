@@ -8,6 +8,7 @@ import { AppSidebar } from "@/components/layout/app-sidebar";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { SiteHeader } from "@/components/layout/site-header";
 import { WeaveSpinner } from "@/components/ui/weave-spinner";
+import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { useAuth } from "@/components/providers/auth-provider";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -39,6 +40,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </SidebarInset>
         <BottomNav />
+        <InstallPrompt />
       </SidebarProvider>
     </TooltipProvider>
   );

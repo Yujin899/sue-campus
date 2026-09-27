@@ -23,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { WeaveSpinner } from "@/components/ui/weave-spinner";
 import { toast } from "@/components/ui/toast";
 import { QuizStatusBadge } from "@/components/quizzes/quiz-status-badge";
+import { FieldError, fieldAria } from "@/components/form/field";
 import { clientFetch } from "@/lib/client-api";
 import type { Question, Quiz, QuizStatus } from "@/lib/types";
 
@@ -44,6 +45,7 @@ export function AdminQuizManager() {
     Question[] | null
   >(null);
   const [note, setNote] = React.useState("");
+  const [noteError, setNoteError] = React.useState<string | null>(null);
   const [isReviewing, setIsReviewing] = React.useState(false);
 
   const [unpublishTarget, setUnpublishTarget] = React.useState<Quiz | null>(
@@ -95,13 +97,10 @@ export function AdminQuizManager() {
   async function handleReview(action: "approve" | "reject") {
     if (!reviewTarget) return;
     if (action === "reject" && !note.trim()) {
-      toast.add({
-        type: "warning",
-        title: "Add a note",
-        description: "Tell the author what needs changing before rejecting.",
-      });
+      setNoteError("Tell the author what needs changing before rejecting.");
       return;
     }
+    setNoteError(null);
     setIsReviewing(true);
     try {
       await clientFetch(`/quizzes/${reviewTarget.id}/review`, {
@@ -168,8 +167,8 @@ export function AdminQuizManager() {
 
         <TabsContent value={tab}>
           {loadError ? (
-            <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/50 p-12 text-center">
-              <p className="font-medium">Couldn&apos;t load quizzes</p>
+        <div role="alert" className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/50 p-12 text-center">
+          <p className="font-medium text-destructive">Couldn&apos;t load quizzes</p>
               <p className="text-sm text-muted-foreground">{loadError}</p>
               <Button variant="outline" onClick={() => void load(tab)}>
                 Try again
@@ -324,8 +323,13 @@ export function AdminQuizManager() {
               value={note}
               placeholder="Explain what needs to change…"
               disabled={isReviewing}
-              onChange={(event) => setNote(event.target.value)}
+              onChange={(event) => {
+                setNote(event.target.value);
+                setNoteError(null);
+              }}
+              {...fieldAria("reviewNote", noteError ?? undefined)}
             />
+            <FieldError field="reviewNote">{noteError}</FieldError>
           </div>
 
           <DialogFooter>

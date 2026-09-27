@@ -2,6 +2,7 @@
 
 import { UserRoundIcon } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { InstallAppRow } from "@/components/pwa/install-app-row";
 import { useAuth } from "@/components/providers/auth-provider";
 
 function getInitials(name?: string | null, email?: string | null): string {
@@ -49,6 +50,7 @@ export default function ProfilePage() {
               {user?.emailVerified ? "Verified" : "Unverified"}
             </span>
           </div>
+          <InstallAppRow />
         </div>
 
         <div className="flex items-center justify-center gap-2 text-muted-foreground">
